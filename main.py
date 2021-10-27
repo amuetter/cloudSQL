@@ -27,11 +27,11 @@ def tables():
         string_schema = ", ".join(list(map(lambda x: f"{x[0]} {x[1]}", schema)))
         query = f"CREATE TABLE {name} ({string_schema});"
         conn = db.get_db(settings.DATABASE)
-        a = conn.execute(query)
+        conn.execute(query)
         return '', 200
 
 
-@app.route('/table/<name>', methods=['GET', 'PUT', 'DELETE'])
+@app.route('/table/<name>', methods=['GET', 'POST', 'DELETE'])
 def table(name):
     conn = db.get_db(settings.DATABASE)
     if name in db.get_tables(conn):
@@ -43,14 +43,17 @@ def table(name):
                 result.append(row)
             return jsonify(result)
 
-        if request.method == 'PUT':
+        if request.method == 'POST':
             data = json.loads(request.data)
-            # TODO insert into table values
+            values = data['values']
+            query = f'''INSERT INTO {name} VALUES ({", ".join(['?' for _ in values])})'''
+            conn.execute(query, values)
+            conn.commit()
             return '', 200
 
         if request.method == 'DELETE':
             query = f"DROP TABLE {name};"
-            a = conn.execute(query)
+            conn.execute(query)
             return ''
 
     else:   
