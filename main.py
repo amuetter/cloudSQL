@@ -1,6 +1,7 @@
-from flask import Flask, jsonify, g, abort
-import DBInterface as db
+from flask import Flask, jsonify, g, abort, request
+import json
 
+import DBInterface as db
 import settings
 
 
@@ -11,26 +12,53 @@ app = Flask(__name__)
 def base():
     return "source"
 
-@app.route("/tables")
-def get_tables():
-    conn = db.get_db(settings.DATABASE)
-    tables = []
-    for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table';").fetchall():
-       tables.append(row[0])
-    return jsonify(tables)
 
-@app.route('/table/<name>')
-def table(name):
-    print(get_tables().json)
-    if name in get_tables().json:
+@app.route("/tables", methods=['GET', 'POST'])
+def tables():
+    conn = db.get_db(settings.DATABASE)
+    if request.method == 'GET':
+        tables = db.get_tables(conn)
+        return jsonify(tables)
+
+    if request.method == 'POST':
+        data = json.loads(request.data)
+        name = data['name']
+        schema = data['schema']
+        string_schema = ", ".join(list(map(lambda x: f"{x[0]} {x[1]}", schema)))
+        query = f"CREATE TABLE {name} ({string_schema});"
         conn = db.get_db(settings.DATABASE)
-        query = f"SELECT * FROM {name};"
-        result = []
-        for row in conn.execute(query).fetchall():
-            result.append(row)
-        return jsonify(result)
-    else:
+        conn.execute(query)
+        return '', 200
+
+
+@app.route('/table/<name>', methods=['GET', 'POST', 'DELETE'])
+def table(name):
+    conn = db.get_db(settings.DATABASE)
+    if name in db.get_tables(conn):
+        if request.method == 'GET':
+            
+            query = f"SELECT * FROM {name};"
+            result = []
+            for row in conn.execute(query).fetchall():
+                result.append(row)
+            return jsonify(result)
+
+        if request.method == 'POST':
+            data = json.loads(request.data)
+            values = data['values']
+            query = f'''INSERT INTO {name} VALUES ({", ".join(['?' for _ in values])})'''
+            conn.execute(query, values)
+            conn.commit()
+            return '', 200
+
+        if request.method == 'DELETE':
+            query = f"DROP TABLE {name};"
+            conn.execute(query)
+            return ''
+
+    else:   
         abort(404)
+
 
 @app.teardown_appcontext
 def close_connection(exception):
@@ -38,9 +66,29 @@ def close_connection(exception):
     if db is not None:
         db.close()
 
+
 @app.errorhandler(Exception)
 def handle_error(e):
+    print(e)
     return jsonify(error=str(e))
+
+
+"""
+from werkzeug.exceptions import HTTPException
+
+@app.errorhandler(HTTPException)
+def handle_exception(e):
+    # start with the correct headers and status code from the error
+    response = e.get_response()
+    # replace the body with JSON
+    response.data = json.dumps({
+        "code": e.code,
+        "name": e.name,
+        "description": e.description,
+    })
+    response.content_type = "application/json"
+    return response
 
 if __name__ == "__main__":
     app.run(debug=True)
+"""
