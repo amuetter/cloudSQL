@@ -20,7 +20,7 @@ class CloudSQL():
 
         @app.route(f'{self.url_prefix}/table/<name>', methods=['GET', 'POST', 'DELETE'])
         def table(name):
-            return v.table(name, self.db_context)
+            return v.table(self.db_context, name)
 
         @app.teardown_appcontext
         def close_connection(exception):
