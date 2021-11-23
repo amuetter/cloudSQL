@@ -5,9 +5,11 @@ from . import views as v
 
 class CloudSQL():
 
-    def __init__(self, dbpath, url_prefix=''):
+    def __init__(self, dbpath, url_prefix='', api_key=None):
         self.url_prefix = url_prefix
         self.db_context = {'sqlitepath': dbpath}
+        if api_key:
+            self.db_context['api_key'] =  api_key
 
 
     def serve(self, app):
