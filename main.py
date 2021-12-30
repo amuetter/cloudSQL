@@ -3,7 +3,7 @@ from cloudsql.core import CloudSQL
 
 app = Flask(__name__)
 
-cs = CloudSQL(dbpath='data/data.db', url_prefix='/database')
+cs = CloudSQL(db_type='sqlite', db_conn_string='data/data.db', url_prefix='/database', api_key='adminadmin')
 cs.serve(app)
 
 

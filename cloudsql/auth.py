@@ -1,9 +1,9 @@
-from flask import request, abort
+from flask import request, abort, g
 
 def request_is_authenticated(func):
     def wrapper(*args, **kwargs):
 
-        key = args[0].get('api_key')
+        key = getattr(g, '_db_context', None).get('api_key')
         request_key = request.args.get('api_key')
 
         if key:
